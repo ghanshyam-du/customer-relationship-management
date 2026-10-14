@@ -1,0 +1,101 @@
+### CRM REST API Test Collection
+@baseUrl = http://localhost:5000/api
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Register New Counselor / Employee
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Michael Scott",
+  "email": "michael.counselor@company.com",
+  "password": "password123",
+  "phone": "+1-555-0301",
+  "role": "counselor"
+}
+
+### 3. Login as Counselor 1 (John Doe)
+# @name loginJohn
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.counselor@company.com",
+  "password": "password123"
+}
+
+### Store John's token
+@johnToken = {{loginJohn.response.body.data.token}}
+
+### 4. Login as Counselor 2 (Sarah Smith)
+# @name loginSarah
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "sarah.counselor@company.com",
+  "password": "password123"
+}
+
+### Store Sarah's token
+@sarahToken = {{loginSarah.response.body.data.token}}
+
+### 5. Get Logged-in Counselor Profile
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{johnToken}}
+
+### 6. Public Form API - Submit New Enquiry (NO AUTHENTICATION REQUIRED)
+# @name submitEnquiry
+POST {{baseUrl}}/enquiries/public
+Content-Type: application/json
+
+{
+  "name": "Robert Downey",
+  "email": "robert.d@example.com",
+  "phone": "+1-555-7777",
+  "courseInterest": "Full Stack Web Development (MERN)",
+  "notes": "Interested in full-time batch starting next month.",
+  "source": "online_form"
+}
+
+### 7. Fetch Unclaimed Leads (Public Enquiries inside CRM)
+GET {{baseUrl}}/enquiries/unclaimed?page=1&limit=10
+Authorization: Bearer {{johnToken}}
+
+### 8. Search Unclaimed Leads by Course
+GET {{baseUrl}}/enquiries/unclaimed?course=Data%20Science
+Authorization: Bearer {{johnToken}}
+
+### 9. Claim an Enquiry (Assigns lead to John Doe)
+# Replace 1 with any unclaimed enquiry ID
+POST {{baseUrl}}/enquiries/1/claim
+Authorization: Bearer {{johnToken}}
+
+### 10. Attempt to Claim Already Claimed Enquiry by Sarah (Should return 409 Conflict)
+POST {{baseUrl}}/enquiries/1/claim
+Authorization: Bearer {{sarahToken}}
+
+### 11. Fetch Leads Claimed by John Doe (My Claims)
+GET {{baseUrl}}/enquiries/my-claims
+Authorization: Bearer {{johnToken}}
+
+### 12. Fetch Leads Claimed by Sarah Smith (My Claims)
+GET {{baseUrl}}/enquiries/my-claims
+Authorization: Bearer {{sarahToken}}
+
+### 13. Update Status and Follow-up Notes for Claimed Enquiry
+PATCH {{baseUrl}}/enquiries/1/status
+Content-Type: application/json
+Authorization: Bearer {{johnToken}}
+
+{
+  "status": "CONTACTED",
+  "notes": "Had a 15-minute phone consultation. Scheduled syllabus walkthrough for Friday."
+}
+
+### 14. Get Enquiry Detail
+GET {{baseUrl}}/enquiries/1
+Authorization: Bearer {{johnToken}}
